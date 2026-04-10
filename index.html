@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Carta Interactiva · PHUNK EDITION · Modo Detective</title>
+    
+    <!-- Fuentes estilo juego + futurista -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #0a0a2a, #000000);
+            font-family: 'Press Start 2P', 'Orbitron', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Partículas de fondo estilo eléctrico */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, rgba(0,255,255,0.05) 0px, rgba(0,255,255,0.05) 2px, transparent 2px, transparent 8px),
+                repeating-linear-gradient(90deg, rgba(255,0,255,0.05) 0px, rgba(255,0,255,0.05) 2px, transparent 2px, transparent 8px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Contenedor principal estilo "arcade neon" */
+        .game-container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(5, 5, 20, 0.75);
+            backdrop-filter: blur(10px);
+            border-radius: 48px;
+            border: 2px solid;
+            border-image: linear-gradient(135deg, #ff00cc, #00ffff, #ff6600, #ff00cc) 1;
+            box-shadow: 
+                0 0 0 3px rgba(0,255,255,0.3),
+                0 0 0 6px rgba(255,0,255,0.2),
+                0 20px 40px rgba(0,0,0,0.6),
+                inset 0 0 60px rgba(0,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+            animation: borderPulse 3s infinite;
+        }
+
+        @keyframes borderPulse {
+            0% { box-shadow: 0 0 0 3px cyan, 0 0 0 6px magenta, 0 20px 40px black; }
+            50% { box-shadow: 0 0 0 3px magenta, 0 0 0 6px cyan, 0 20px 40px black; }
+            100% { box-shadow: 0 0 0 3px cyan, 0 0 0 6px magenta, 0 20px 40px black; }
+        }
+
+        /* Pantallas */
+        .screen {
+            padding: 50px 35px;
+            transition: all 0.5s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            position: relative;
+            z-index: 2;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Títulos estilo neón */
+        .game-title {
+            font-family: 'Orbitron', 'Press Start 2P', monospace;
+            font-size: 1.6rem;
+            text-align: center;
+            background: linear-gradient(135deg, #ff00cc, #00ffff, #ff6600, #ffff00);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(0,255,255,0.5);
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            word-break: break-word;
+            animation: glitchText 2s infinite;
+        }
+
+        @keyframes glitchText {
+            0%, 100% { text-shadow: 2px 0 cyan, -2px 0 magenta; }
+            25% { text-shadow: -2px 0 cyan, 2px 0 magenta; }
+            50% { text-shadow: 3px 0 magenta, -1px 0 cyan; }
+            75% { text-shadow: -3px 0 cyan, 1px 0 magenta; }
+        }
+
+        .subtitle {
+            font-family: 'VT323', monospace;
+            font-size: 1.8rem;
+            text-align: center;
+            color: #0ff;
+            text-shadow: 0 0 8px #0ff, 0 0 15px #f0f;
+            margin-bottom: 25px;
+        }
+
+        /* Botón phunk/eléctrico */
+        .pixel-btn {
+            background: linear-gradient(135deg, #ff00cc, #ff6600);
+            border: none;
+            font-family: 'Orbitron', 'Press Start 2P', monospace;
+            font-size: 1rem;
+            padding: 14px 28px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #aa0066;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 0 15px #ff00cc, 0 5px 0 #990066;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .pixel-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 0 25px #ff00cc, 0 2px 0 #990066;
+        }
+
+        /* Input eléctrico */
+        .pixel-input {
+            background: #0a0a1f;
+            border: 2px solid #0ff;
+            padding: 14px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 1.8rem;
+            text-align: center;
+            color: #0ff;
+            width: 320px;
+            max-width: 90%;
+            outline: none;
+            letter-spacing: 4px;
+            box-shadow: 0 0 10px cyan, inset 0 0 5px cyan;
+            border-radius: 20px;
+        }
+
+        /* Personajes flotantes con aura */
+        .characters-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px;
+            margin: 25px 0 20px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .character {
+            width: 75px;
+            height: 75px;
+            object-fit: contain;
+            image-rendering: crisp-edges;
+            filter: drop-shadow(0 0 8px cyan) drop-shadow(0 0 5px magenta);
+            transition: transform 0.2s ease, filter 0.2s;
+            animation: floatNeon 2.8s infinite ease-in-out;
+            cursor: pointer;
+        }
+
+        .character:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 15px magenta) drop-shadow(0 0 10px cyan);
+        }
+
+        @keyframes floatNeon {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Caja de pista estilo CRT */
+        .pista-box {
+            background: rgba(0, 0, 0, 0.7);
+            border-left: 8px solid #ff00cc;
+            border-right: 2px solid #0ff;
+            padding: 18px;
+            margin: 20px 0;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            color: #0ff;
+            text-shadow: 0 0 3px magenta;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 20px rgba(0,255,255,0.3);
+        }
+
+        .error-msg {
+            color: #ff44cc;
+            font-size: 0.8rem;
+            margin-top: 12px;
+            font-family: 'Press Start 2P', monospace;
+            text-shadow: 0 0 5px red;
+        }
+
+        /* CARTA DECORADA ESTILO PHUNK */
+        .carta-container {
+            background: linear-gradient(145deg, #fff5e6, #ffecce);
+            border-radius: 32px;
+            padding: 35px 30px;
+            box-shadow: 
+                0 0 0 4px #ff00cc,
+                0 0 0 8px #00ffff,
+                0 20px 40px rgba(0,0,0,0.6),
+                inset 0 0 40px rgba(255,200,100,0.6);
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            line-height: 1.55;
+            color: #2a1a0a;
+            max-height: 550px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* detalles decorativos de la carta */
+        .carta-container::before {
+            content: "⚡💜🎮💘⚡";
+            position: absolute;
+            top: -20px;
+            left: 20px;
+            font-size: 1.8rem;
+            opacity: 0.5;
+            font-family: monospace;
+        }
+
+        .carta-container::after {
+            content: "✦✧✦✧✦";
+            position: absolute;
+            bottom: -15px;
+            right: 20px;
+            font-size: 1.5rem;
+            opacity: 0.6;
+        }
+
+        .carta-container p {
+            margin-bottom: 16px;
+            border-left: 3px solid #ff66cc;
+            padding-left: 12px;
+            transition: 0.2s;
+        }
+
+        .carta-container p:hover {
+            border-left-color: cyan;
+            transform: translateX(5px);
+        }
+
+        /* Control de música neón */
+        .music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a0a2fcc;
+            backdrop-filter: blur(12px);
+            padding: 10px 18px;
+            border-radius: 60px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: 1px solid cyan;
+            color: cyan;
+            font-family: 'Orbitron', monospace;
+            z-index: 99;
+            transition: 0.2s;
+            box-shadow: 0 0 10px magenta;
+        }
+
+        .music-control:hover {
+            background: magenta;
+            color: black;
+            border-color: yellow;
+        }
+
+        .btn-pista {
+            background: linear-gradient(135deg, #00ccff, #6600ff);
+            border: none;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.7rem;
+            padding: 8px 18px;
+            color: white;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-left: 15px;
+            box-shadow: 0 0 10px cyan;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.65rem;
+            color: #ff88cc;
+            margin-top: 25px;
+            text-shadow: 0 0 5px magenta;
+            font-family: monospace;
+        }
+
+        /* Scroll bonito */
+        .carta-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .carta-container::-webkit-scrollbar-track {
+            background: #2a1a0a;
+            border-radius: 10px;
+        }
+        .carta-container::-webkit-scrollbar-thumb {
+            background: #ff00cc;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 650px) {
+            .screen { padding: 30px 18px; }
+            .game-title { font-size: 1rem; }
+            .character { width: 55px; height: 55px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameApp">
+    
+    <!-- FASE 1: INICIO - PHUNK EDITION -->
+    <div id="screenStart" class="screen">
+        <div class="characters-area" id="startChars">
+            <!-- ⬇️ REEMPLAZA CON TUS PNG #1 y #2 ⬇️ -->
+            <img src="personaje1.png" class="character" alt="personaje1" onerror="this.src='https://placehold.co/75x75/ff00cc/white?text=PNG1'">
+            <img src="personaje2.png" class="character" alt="personaje2" onerror="this.src='https://placehold.co/75x75/00ffff/black?text=PNG2'">
+        </div>
+        
+        <div class="game-title">✦ PARA LA PERSONA QUE MÁS AMO ✦</div>
+        
+        <div style="text-align: center; margin: 35px 0;">
+            <button class="pixel-btn" id="btnStart">⚡▶ INICIAR AVENTURA ◀⚡</button>
+        </div>
+        
+        <footer>🔮 Teamooooo 🔮</footer>
+    </div>
+
+    <!-- FASE 2: MODO DETECTIVE NEON -->
+    <div id="screenPassword" class="screen hidden">
+        <div class="characters-area" id="passwordChars">
+            <!-- ⬇️ 3 personajes PNG 3,4,5 ⬇️ -->
+            <img src="personaje3.png" class="character" alt="detective1" onerror="this.src='https://placehold.co/75x75/ff6600/white?text=PNG3'">
+            <img src="personaje4.png" class="character" alt="detective2" onerror="this.src='https://placehold.co/75x75/ff00cc/white?text=PNG4'">
+            <img src="personaje5.png" class="character" alt="detective3" onerror="this.src='https://placehold.co/75x75/00ffff/black?text=PNG5'">
+        </div>
+        
+        <div class="game-title">🔍 CASO: EL CORAZÓN OCULTO</div>
+        <div class="subtitle">⚡〚 INGRESA EL CÓDIGO SECRETO 〛⚡</div>
+        
+        <div style="text-align: center;">
+            <input type="text" id="codigoInput" class="pixel-input" placeholder="CÓDIGO" maxlength="10" autocomplete="off">
+            <br>
+            <button class="pixel-btn" id="btnVerificar" style="margin-right: 10px;">🔓 DESBLOQUEAR</button>
+            <button class="btn-pista" id="btnMostrarPista">🔎 BUSCAR CLAVE</button>
+        </div>
+        
+        <div id="pistaContainer" class="pista-box hidden">
+            💡 PISTA DETECTIVE: <span id="pistaTexto">"Cual fue el tiempo que te mandé mensaje por primera vez en Insta y otra es de 7 digitos PIENSALEEEE"</span>
+        </div>
+        <div id="errorPass" class="error-msg" style="text-align:center;"></div>
+        
+        <footer>🔐 solo mi persona especial</footer>
+    </div>
+
+    <!-- FASE 3: CARTA FINAL (con todos los colores phunk y decoración) -->
+    <div id="screenCarta" class="screen hidden">
+        <div class="characters-area" id="cartaChars">
+            <!-- ⬇️ Los últimos 5 personajes (PNG 6 al 10) ⬇️ -->
+            <img src="personaje6.png" class="character" alt="personaje6" onerror="this.src='https://placehold.co/75x75/ff44aa/white?text=PNG6'">
+            <img src="personaje7.png" class="character" alt="personaje7" onerror="this.src='https://placehold.co/75x75/44ffaa/black?text=PNG7'">
+            <img src="personaje8.png" class="character" alt="personaje8" onerror="this.src='https://placehold.co/75x75/ffaa44/white?text=PNG8'">
+            <img src="personaje9.png" class="character" alt="personaje9" onerror="this.src='https://placehold.co/75x75/ff44ff/black?text=PNG9'">
+            <img src="personaje10.png" class="character" alt="personaje10" onerror="this.src='https://placehold.co/75x75/44ffff/black?text=PNG10'">
+        </div>
+        
+        <div class="game-title">✨ CARTA DESBLOQUEADA ✨</div>
+        <div class="carta-container" id="cartaTexto">
+            <p>💜 Mi vida se ha vuelto más bonita desde que llegaste. No sabes cuánto. Gracias por hacerme la persona más feliz, por regalarme tu tiempo, tu risa, tu manera de mirarme. Quiero que seamos tú y yo. Solo tú y yo. 💜</p>
+            <p>💚 Puedo asegurarte que lo que siento contigo es único, diferente a todo lo que había sentido antes. Me encanta todo de ti. Cada detalle. Cada gesto. Cada forma de ser. Nunca quiero que te alejes de mi vida, quiero que lo nuestro vaya bien, que florezca, que se quede. 💚</p>
+            <p>💛 Me encanta tu forma de ser, tu fuerza, tus silencios y también tus locuras. Cada cosa que me cuentas, cada sueño que compartes, cada pequeño gesto se convierte en algo enorme dentro de mi corazón. Porque contigo nada es pequeño. 💛</p>
+            <p>🧡 A tu lado quiero seguir descubriendo quiénes somos, qué más podemos ser, y qué bonito se siente. Porque antes de ti no sabía que se podía ser tan feliz solo con tener a alguien cerca. Pero déjame decirte algo… mis momentos favoritos siempre serán aquellos al principio, cuando nos hablábamos por primera vez, cuando pasábamos todo el día mensajeando JAJAJKAJAA. Siempre esperaba tu mensaje. Cada vez que me respondías, sentía algo bonito en el pecho y me ponía muy feliz… 🧡</p>
+            <p> Hasta que por TU CULPA, maldito, me dejaste en visto. HEE. Nunca lo voy a olvidar.</p>
+            <p>💖 Pero a pesar de ese visto (que todavía me duele, eeh), aquí sigo, queriéndote como al primer día. TEAMOO MUCHOO 💖</p>
+        </div>
+        <footer>🎮 OJALA SI TE HAIGA GUSTADO ME COSTOOO HACERLOO  🎨</footer>
+    </div>
+</div>
+
+<div class="music-control" id="musicToggle">🎵 MUSIC ON</div>
+
+<script>
+    // Música estilo videojuego phunk/techno (pistas libres)
+    let musicaFondo = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
+    let musicaCarta = new Audio('Carta.mp3');
+    
+    musicaFondo.loop = true;
+    musicaFondo.volume = 0.3;
+    musicaCarta.loop = true;
+    musicaCarta.volume = 0.35;
+    
+    let musicaActiva = 'start';
+    let musicEnabled = true;
+    
+    function playMusic(type) {
+        if (!musicEnabled) return;
+        try {
+            if (type === 'start') {
+                musicaCarta.pause();
+                musicaCarta.currentTime = 0;
+                musicaFondo.play().catch(e => console.log("autoplay", e));
+                musicaActiva = 'start';
+            } else if (type === 'carta') {
+                musicaFondo.pause();
+                musicaFondo.currentTime = 0;
+                musicaCarta.play().catch(e => console.log("error carta", e));
+                musicaActiva = 'carta';
+            }
+        } catch(e) {}
+    }
+    
+    function stopAllMusic() { musicaFondo.pause(); musicaCarta.pause(); }
+    
+    function toggleMusic() {
+        musicEnabled = !musicEnabled;
+        const btn = document.getElementById('musicToggle');
+        if (musicEnabled) {
+            if (musicaActiva === 'start') musicaFondo.play().catch(e=>{});
+            else musicaCarta.play().catch(e=>{});
+            btn.innerHTML = '🎵 MUSIC ON';
+        } else {
+            stopAllMusic();
+            btn.innerHTML = '🔇 MUSIC OFF';
+        }
+    }
+    document.getElementById('musicToggle').onclick = toggleMusic;
+    
+    // Elementos
+    const screenStart = document.getElementById('screenStart');
+    const screenPass = document.getElementById('screenPassword');
+    const screenCarta = document.getElementById('screenCarta');
+    const btnStart = document.getElementById('btnStart');
+    const btnVerificar = document.getElementById('btnVerificar');
+    const btnMostrarPista = document.getElementById('btnMostrarPista');
+    const pistaContainer = document.getElementById('pistaContainer');
+    const codigoInput = document.getElementById('codigoInput');
+    const errorPassSpan = document.getElementById('errorPass');
+    
+    const CODIGO_SECRETO = "1912356";
+    
+    btnMostrarPista.addEventListener('click', () => {
+        pistaContainer.classList.remove('hidden');
+    });
+    
+    btnVerificar.addEventListener('click', () => {
+        if (codigoInput.value.trim() === CODIGO_SECRETO) {
+            screenPass.classList.add('hidden');
+            screenCarta.classList.remove('hidden');
+            playMusic('carta');
+            errorPassSpan.innerText = '';
+        } else {
+            errorPassSpan.innerText = '❌ CÓDIGO ERRÓNEO... VUELVE A INTENTAR ❌';
+        }
+    });
+    
+    btnStart.addEventListener('click', () => {
+        let formsUrl = "https://forms.gle/pxJY4mt5ibK9WcK8A";  // CAMBIA POR TU GOOGLE FORM
+        if (formsUrl) {
+    window.open(formsUrl, '_blank');
+} else {
+    alert("📝 Cuestionario especial muy pronto. ¡Ahora ingresa la contraseña!");
+}
+        screenStart.classList.add('hidden');
+        screenPass.classList.remove('hidden');
+        playMusic('start');
+    });
+    
+    // Autoplay después del primer clic
+    let firstInteraction = false;
+    function enableAudio() {
+        if (!firstInteraction) {
+            musicaFondo.play().catch(()=>{});
+            firstInteraction = true;
+        }
+    }
+    document.body.addEventListener('click', enableAudio, { once: true });
+    
+    codigoInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') btnVerificar.click(); });
+    
+    // Efecto hover personajes
+    document.querySelectorAll('.character').forEach(ch => {
+        ch.addEventListener('mouseenter', (e) => e.target.style.transform = 'scale(1.2)');
+        ch.addEventListener('mouseleave', (e) => e.target.style.transform = 'scale(1)');
+    });
+</script>
+</body>
+</html>
